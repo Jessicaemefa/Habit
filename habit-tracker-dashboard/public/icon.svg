@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#f59e0b"/>
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="148" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="20"/>
+  <!-- Inner ring -->
+  <circle cx="256" cy="256" r="88" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="16"/>
+  <!-- Center dot -->
+  <circle cx="256" cy="256" r="28" fill="white"/>
+  <!-- Flame accent at top -->
+  <path d="M256 136 C256 136 240 156 240 172 C240 180 248 186 256 186 C264 186 272 180 272 172 C272 156 256 136 256 136Z" fill="rgba(255,255,255,0.85)"/>
+</svg>

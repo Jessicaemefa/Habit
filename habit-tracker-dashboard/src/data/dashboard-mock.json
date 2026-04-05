@@ -1,0 +1,54 @@
+{
+  "header": {
+    "weekday": "Monday",
+    "titlePrefix": "Today,",
+    "dateHighlight": "Mar 2"
+  },
+  "habits": [
+    {
+      "id": "meditation",
+      "title": "Morning Meditation",
+      "emoji": "\uD83E\uDDD8",
+      "streak": 12,
+      "bestStreak": 18,
+      "dailyProgress": 0.75
+    },
+    {
+      "id": "read",
+      "title": "Read 20 Pages",
+      "emoji": "\uD83D\uDCD6",
+      "streak": 5,
+      "bestStreak": 14,
+      "dailyProgress": 0.25
+    },
+    {
+      "id": "exercise",
+      "title": "Exercise",
+      "emoji": "\uD83C\uDFCB\uFE0F",
+      "streak": 31,
+      "bestStreak": 31,
+      "dailyProgress": 1
+    },
+    {
+      "id": "water",
+      "title": "Drink 8 Glasses of Water",
+      "emoji": "\uD83D\uDCA7",
+      "streak": 3,
+      "bestStreak": 10,
+      "dailyProgress": 0.15
+    }
+  ],
+  "milestones": [3, 7, 14, 30, 100],
+  "tasks": [
+    {
+      "id": "garage",
+      "emoji": "\uD83E\uDDF9",
+      "title": "Clean the Garage"
+    },
+    {
+      "id": "groceries",
+      "emoji": "\uD83D\uDED2",
+      "title": "Buy Groceries"
+    }
+  ]
+}
