@@ -147,7 +147,7 @@ export default function HistoryPage() {
 
       <header className="mb-8">
         <div className="flex items-center gap-2 text-amber-600 dark:text-accent-amber">
-          <Calendar className="h-8 w-8" strokeWidth={2} />
+          {/* <Calendar className="h-8 w-8" strokeWidth={2} /> */}
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
             History &amp; insights
           </h1>
