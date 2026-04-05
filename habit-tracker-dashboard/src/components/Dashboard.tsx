@@ -29,7 +29,7 @@ import { CircularProgressRing } from "@/components/CircularProgressRing";
 import { Modal } from "@/components/Modal";
 import { IconPickerGrid } from "@/components/IconPickerGrid";
 import { AppHeader } from "@/components/AppHeader";
-import { Clock, Flame, ListTodo, Plus, Sparkles, Target, Trophy } from "lucide-react";
+import { Clock, Flame, Plus, Target, Trophy } from "lucide-react";
 
 function newId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -500,13 +500,8 @@ export function Dashboard() {
                 </span>
               </CircularProgressRing>
               <div>
-                <p className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+                <p className="text-lg font-bold text-slate-900 dark:text-white">
                   {heroMessage}
-                  <Sparkles
-                    className="h-5 w-5 text-amber-600 dark:text-accent-amber"
-                    strokeWidth={2}
-                    aria-hidden
-                  />
                 </p>
                 <p className="mt-1 text-sm text-slate-600 dark:text-muted">{heroSub}</p>
               </div>
@@ -675,7 +670,6 @@ export function Dashboard() {
             onClick={startCreateHabit}
             className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-6 text-center transition hover:border-amber-400/50 hover:bg-amber-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
           >
-            <Target className="h-10 w-10 text-amber-600 dark:text-accent-amber" strokeWidth={2} />
             <span className="font-semibold text-slate-900 dark:text-white">Daily habit</span>
             <span className="text-xs text-slate-500 dark:text-muted">
               Track streaks &amp; daily progress
@@ -686,7 +680,6 @@ export function Dashboard() {
             onClick={startCreateTask}
             className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-6 text-center transition hover:border-emerald-400/50 hover:bg-emerald-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
           >
-            <ListTodo className="h-10 w-10 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
             <span className="font-semibold text-slate-900 dark:text-white">Task / To-do</span>
             <span className="text-xs text-slate-500 dark:text-muted">One-off checklist items</span>
           </button>

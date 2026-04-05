@@ -20,11 +20,11 @@ export function AppHeader() {
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
       <nav className="flex gap-1 rounded-2xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/8 dark:bg-[#111]/60">
         <Link href="/" className={linkCls(pathname === "/")}>
-          <LayoutDashboard className="h-4 w-4" strokeWidth={2} />
+          {/* <LayoutDashboard className="h-4 w-4" strokeWidth={2} /> */}
           Today
         </Link>
         <Link href="/history" className={linkCls(pathname === "/history")}>
-          <CalendarDays className="h-4 w-4" strokeWidth={2} />
+          {/* <CalendarDays className="h-4 w-4" strokeWidth={2} /> */}
           History
         </Link>
       </nav>
