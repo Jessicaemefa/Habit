@@ -28,54 +28,8 @@ import { TaskItem } from "@/components/TaskItem";
 import { CircularProgressRing } from "@/components/CircularProgressRing";
 import { Modal } from "@/components/Modal";
 import { IconPickerGrid } from "@/components/IconPickerGrid";
-import { Flame, ListTodo, Plus, Sparkles, Target, Trophy } from "lucide-react";
-
-function DashboardSkeleton() {
-  return (
-    <div className="relative min-h-screen">
-      <div className="mx-auto max-w-lg px-4 py-8 pb-36 sm:px-6 sm:py-10 sm:pb-40">
-        {/* date heading skeleton */}
-        <div className="mb-8 space-y-2">
-          <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-          <div className="h-9 w-52 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-        </div>
-        {/* hero card skeleton */}
-        <div className="glass-card glass-inset mb-8 rounded-2xl p-5 sm:p-6">
-          <div className="flex items-center gap-5">
-            <div className="h-28 w-28 shrink-0 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-            <div className="space-y-3">
-              <div className="h-5 w-28 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-              <div className="h-4 w-40 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="rounded-xl border border-slate-200/90 bg-white/50 p-3 dark:border-white/8 dark:bg-[#111]/50"
-              >
-                <div className="mx-auto h-6 w-6 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-                <div className="mx-auto mt-2 h-6 w-10 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-                <div className="mx-auto mt-1.5 h-3 w-14 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* tab bar skeleton */}
-        <div className="mb-4 h-11 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/8" />
-        {/* list skeleton */}
-        <div className="flex flex-col gap-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-[72px] animate-pulse rounded-2xl border border-slate-200/90 bg-white/50 dark:border-white/8 dark:bg-[#111]/50"
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+import { AppHeader } from "@/components/AppHeader";
+import { Clock, Flame, Plus, Target, Trophy } from "lucide-react";
 
 function newId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -508,13 +462,8 @@ export function Dashboard() {
                 </span>
               </CircularProgressRing>
               <div>
-                <p className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+                <p className="text-lg font-bold text-slate-900 dark:text-white">
                   {heroMessage}
-                  <Sparkles
-                    className="h-5 w-5 text-amber-600 dark:text-accent-amber"
-                    strokeWidth={2}
-                    aria-hidden
-                  />
                 </p>
                 <p className="mt-1 text-sm text-slate-600 dark:text-muted">{heroSub}</p>
               </div>
@@ -655,7 +604,6 @@ export function Dashboard() {
             onClick={startCreateHabit}
             className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-6 text-center transition hover:border-amber-400/50 hover:bg-amber-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
           >
-            <Target className="h-10 w-10 text-amber-600 dark:text-accent-amber" strokeWidth={2} />
             <span className="font-semibold text-slate-900 dark:text-white">Daily habit</span>
             <span className="text-xs text-slate-500 dark:text-muted">
               Track streaks &amp; daily progress
@@ -666,7 +614,6 @@ export function Dashboard() {
             onClick={startCreateTask}
             className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-6 text-center transition hover:border-emerald-400/50 hover:bg-emerald-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
           >
-            <ListTodo className="h-10 w-10 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
             <span className="font-semibold text-slate-900 dark:text-white">Task / To-do</span>
             <span className="text-xs text-slate-500 dark:text-muted">One-off checklist items</span>
           </button>
