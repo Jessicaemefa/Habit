@@ -29,7 +29,81 @@ import { TaskItem } from "@/components/TaskItem";
 import { CircularProgressRing } from "@/components/CircularProgressRing";
 import { Modal } from "@/components/Modal";
 import { IconPickerGrid } from "@/components/IconPickerGrid";
-import { Flame, Plus, Target, Trophy } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarClock,
+  Check,
+  Flame,
+  ListTodo,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Target,
+  Trash2,
+  Trophy,
+} from "lucide-react";
+
+// ─── Appointment helpers ──────────────────────────────────────────────────────
+const APPT_KEY = "ht-appointments-v1";
+
+type Appointment = {
+  id: string;
+  title: string;
+  notes: string;
+  date: string;   // YYYY-MM-DD
+  time: string;   // HH:MM
+  createdAt: string;
+  isCompleted: boolean;
+  completedAt?: string;
+};
+
+type ApptForm = {
+  title: string;
+  notes: string;
+  date: string;
+  time: string;
+};
+
+function loadAppts(): Appointment[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(APPT_KEY);
+    return raw ? (JSON.parse(raw) as Appointment[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveAppts(appts: Appointment[]) {
+  try {
+    localStorage.setItem(APPT_KEY, JSON.stringify(appts));
+  } catch {}
+}
+
+function todayStr() {
+  return toLocalDateKey(new Date());
+}
+
+function nowTimeStr() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatApptDateTime(date: string, time: string) {
+  if (!date) return "";
+  const [y, m, d] = date.split("-").map(Number);
+  const label = new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric",
+  });
+  return time ? `${label} at ${time}` : label;
+}
+
+const emptyApptForm = (): ApptForm => ({
+  title: "",
+  notes: "",
+  date: todayStr(),
+  time: nowTimeStr(),
+});
 
 function DashboardSkeleton() {
   return (
@@ -120,7 +194,14 @@ export function Dashboard() {
     lastActiveDate,
   });
 
-  const [activeTab, setActiveTab] = useState<"habits" | "tasks">("habits");
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [apptReady, setApptReady] = useState(false);
+  const [completingApptIds, setCompletingApptIds] = useState<Set<string>>(new Set());
+  const [apptModalOpen, setApptModalOpen] = useState(false);
+  const [apptEditingId, setApptEditingId] = useState<string | null>(null);
+  const [apptForm, setApptForm] = useState<ApptForm>(emptyApptForm);
+
+  const [activeTab, setActiveTab] = useState<"habits" | "tasks" | "appointments">("habits");
   const [completingHabitIds, setCompletingHabitIds] = useState<Set<string>>(new Set());
   const [completingTaskIds, setCompletingTaskIds] = useState<Set<string>>(new Set());
 
@@ -161,6 +242,15 @@ export function Dashboard() {
     });
   }, [habits, tasks, activityLog, lastActiveDate, storageReady]);
 
+  useEffect(() => {
+    setAppointments(loadAppts());
+    setApptReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (apptReady) saveAppts(appointments);
+  }, [appointments, apptReady]);
+
   const runRolloverIfNeeded = useCallback(() => {
     const today = toLocalDateKey(new Date());
     const s = snapRef.current;
@@ -196,8 +286,10 @@ export function Dashboard() {
   const habitsDoneToday = habitsFullyDoneCount(habits);
   const doneTasks = tasks.filter((t) => t.isCompleted).length;
   const totalTasks = tasks.length;
+  const doneAppts = appointments.filter((a) => a.isCompleted).length;
+  const totalAppts = appointments.length;
 
-  const doneTodayTotal = habitsDoneToday + doneTasks;
+  const doneTodayTotal = habitsDoneToday + doneTasks + doneAppts;
   const completionPct = weightedCompletionPercent(habits, tasks);
 
   const heroHabitRingProgress =
@@ -227,10 +319,13 @@ export function Dashboard() {
     setPickOpen(false);
     setHabitModalOpen(false);
     setTaskModalOpen(false);
+    setApptModalOpen(false);
     setHabitEditingId(null);
     setTaskEditingId(null);
+    setApptEditingId(null);
     setHabitForm(emptyHabitForm());
     setTaskForm(emptyTaskForm());
+    setApptForm(emptyApptForm());
   }, []);
 
   const openAddDock = useCallback(() => setPickOpen(true), []);
@@ -248,6 +343,93 @@ export function Dashboard() {
     setTaskForm(emptyTaskForm());
     setTaskModalOpen(true);
   }, []);
+
+  const startCreateAppt = useCallback(() => {
+    setPickOpen(false);
+    setApptEditingId(null);
+    setApptForm(emptyApptForm());
+    setApptModalOpen(true);
+  }, []);
+
+  const openEditAppt = useCallback(
+    (id: string) => {
+      const a = appointments.find((x) => x.id === id);
+      if (!a) return;
+      setApptEditingId(id);
+      setApptForm({ title: a.title, notes: a.notes, date: a.date, time: a.time });
+      setApptModalOpen(true);
+    },
+    [appointments],
+  );
+
+  const saveAppt = useCallback(() => {
+    const title = apptForm.title.trim();
+    if (!title) return;
+    if (apptEditingId) {
+      setAppointments((prev) =>
+        prev.map((a) =>
+          a.id === apptEditingId
+            ? { ...a, title, notes: apptForm.notes.trim(), date: apptForm.date, time: apptForm.time }
+            : a,
+        ),
+      );
+    } else {
+      const id = newId("appt");
+      setAppointments((prev) => [
+        ...prev,
+        {
+          id,
+          title,
+          notes: apptForm.notes.trim(),
+          date: apptForm.date,
+          time: apptForm.time,
+          createdAt: new Date().toISOString(),
+          isCompleted: false,
+        },
+      ]);
+      setActivityLog((log) =>
+        mergeLog(log, newLogEntry({ kind: "task_created", summary: `New appointment: ${title}` })),
+      );
+    }
+    closeAllModals();
+  }, [apptForm, apptEditingId, closeAllModals]);
+
+  const toggleCompleteAppt = useCallback((id: string) => {
+    setAppointments((prev) => {
+      const a = prev.find((x) => x.id === id);
+      if (!a) return prev;
+      const nextDone = !a.isCompleted;
+      if (nextDone) {
+        setCompletingApptIds((s) => new Set([...s, id]));
+        setTimeout(() => {
+          setCompletingApptIds((s) => { const n = new Set(s); n.delete(id); return n; });
+        }, 420);
+      }
+      setActivityLog((log) =>
+        mergeLog(log, newLogEntry({
+          kind: nextDone ? "appointment_completed" : "appointment_uncompleted",
+          summary: nextDone ? `Appointment done: ${a.title}` : `Appointment reopened: ${a.title}`,
+          appointmentId: a.id,
+        })),
+      );
+      return prev.map((x) =>
+        x.id === id
+          ? { ...x, isCompleted: nextDone, completedAt: nextDone ? new Date().toISOString() : undefined }
+          : x,
+      );
+    });
+  }, []);
+
+  const deleteAppt = useCallback(
+    (id: string) => {
+      const a = appointments.find((x) => x.id === id);
+      if (!a) return;
+      if (!window.confirm(`Delete appointment "${a.title}"?`)) return;
+      setAppointments((prev) => prev.filter((x) => x.id !== id));
+      if (apptEditingId === id) closeAllModals();
+    },
+    [appointments, apptEditingId, closeAllModals],
+  );
 
   const openEditHabit = useCallback(
     (id: string) => {
@@ -554,12 +736,14 @@ export function Dashboard() {
           role="tablist"
           aria-label="Today's view"
         >
-          {(["habits", "tasks"] as const).map((tab) => {
+          {(
+            [
+              { id: "habits", label: "Habits", badge: `${habitsDoneToday}/${totalHabits}` },
+              { id: "tasks",  label: "Tasks",  badge: `${doneTasks}/${totalTasks}` },
+              // { id: "appointments", label: "Appointments", badge: `${doneAppts}/${totalAppts}` },
+            ] as const
+          ).map(({ id: tab, label, badge }) => {
             const active = activeTab === tab;
-            const label = tab === "habits" ? "Daily Habits" : "Tasks";
-            const badge = tab === "habits"
-              ? `${habitsDoneToday}/${totalHabits}`
-              : `${doneTasks}/${totalTasks}`;
             return (
               <button
                 key={tab}
@@ -567,7 +751,7 @@ export function Dashboard() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setActiveTab(tab)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium transition sm:text-sm sm:px-3 ${
                   active
                     ? "bg-amber-500/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-400"
                     : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 dark:text-[#888] dark:hover:bg-white/5 dark:hover:text-white"
@@ -591,38 +775,70 @@ export function Dashboard() {
         {/* ── Tab content ── */}
         <section aria-label={activeTab === "habits" ? "Daily Habits" : "Tasks"}>
           {activeTab === "habits" ? (
-            <ul className="flex flex-col gap-3">
-              {[
-                ...habits.filter((h) => h.dailyProgress < h.dailyGoal || completingHabitIds.has(h.id)),
-                ...habits.filter((h) => h.dailyProgress >= h.dailyGoal && !completingHabitIds.has(h.id)),
-              ].map((habit) => (
-                <li key={habit.id} className={completingHabitIds.has(habit.id) ? "item-completing" : ""}>
-                  <HabitCard
-                    habit={habit}
-                    onSetProgress={(v) => commitHabitProgress(habit.id, v)}
-                    onEdit={() => openEditHabit(habit.id)}
-                    onDelete={() => deleteHabit(habit.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {[
-                ...tasks.filter((t) => !t.isCompleted || completingTaskIds.has(t.id)),
-                ...tasks.filter((t) => t.isCompleted && !completingTaskIds.has(t.id)),
-              ].map((task) => (
-                <li key={task.id} className={completingTaskIds.has(task.id) ? "item-completing" : ""}>
-                  <TaskItem
-                    task={task}
-                    onToggle={() => toggleTask(task.id)}
-                    onEdit={() => openEditTask(task.id)}
-                    onDelete={() => deleteTask(task.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+            habits.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300/80 p-8 text-center text-sm text-slate-500 dark:border-white/10 dark:text-muted">
+                No habits yet. Tap <strong>Add new</strong> to create one.
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {[
+                  ...habits.filter((h) => h.dailyProgress < h.dailyGoal || completingHabitIds.has(h.id)),
+                  ...habits.filter((h) => h.dailyProgress >= h.dailyGoal && !completingHabitIds.has(h.id)),
+                ].map((habit) => (
+                  <li key={habit.id} className={completingHabitIds.has(habit.id) && habits.length > 1 ? "item-completing" : ""}>
+                    <HabitCard
+                      habit={habit}
+                      onSetProgress={(v) => commitHabitProgress(habit.id, v)}
+                      onEdit={() => openEditHabit(habit.id)}
+                      onDelete={() => deleteHabit(habit.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : activeTab === "tasks" ? (
+            tasks.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300/80 p-8 text-center text-sm text-slate-500 dark:border-white/10 dark:text-muted">
+                No tasks yet. Tap <strong>Add new</strong> to create one.
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {[
+                  ...tasks.filter((t) => !t.isCompleted || completingTaskIds.has(t.id)),
+                  ...tasks.filter((t) => t.isCompleted && !completingTaskIds.has(t.id)),
+                ].map((task) => (
+                  <li key={task.id} className={completingTaskIds.has(task.id) && tasks.length > 1 ? "item-completing" : ""}>
+                    <TaskItem
+                      task={task}
+                      onToggle={() => toggleTask(task.id)}
+                      onEdit={() => openEditTask(task.id)}
+                      onDelete={() => deleteTask(task.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null /* appointments tab commented out */
+          /* ) : (
+            // ── Appointments tab ──
+            appointments.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300/80 p-8 text-center text-sm text-slate-500 dark:border-white/10 dark:text-muted">
+                No appointments yet. Tap <strong>Add new</strong> to schedule one.
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {[
+                  ...appointments.filter((a) => !a.isCompleted || completingApptIds.has(a.id)),
+                  ...appointments.filter((a) => a.isCompleted && !completingApptIds.has(a.id)),
+                ].map((appt) => (
+                  <li key={appt.id} className={completingApptIds.has(appt.id) && appointments.length > 1 ? "item-completing" : ""}>
+                    ...appt card...
+                  </li>
+                ))}
+              </ul>
+            )
+          ) */
+          }
         </section>
       </div>
 
@@ -649,9 +865,10 @@ export function Dashboard() {
           <button
             type="button"
             onClick={startCreateHabit}
-            className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-6 text-center transition hover:border-amber-400/50 hover:bg-amber-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
+            className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-5 text-center transition hover:border-amber-400/50 hover:bg-amber-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
           >
-            <span className="font-semibold text-slate-900 dark:text-white">Daily habit</span>
+            {/* <Target className="h-7 w-7 text-amber-500 dark:text-accent-amber" strokeWidth={2} /> */}
+            <span className="font-semibold text-slate-900 dark:text-white">Daily Habit</span>
             <span className="text-xs text-slate-500 dark:text-muted">
               Track streaks &amp; daily progress
             </span>
@@ -659,11 +876,22 @@ export function Dashboard() {
           <button
             type="button"
             onClick={startCreateTask}
-            className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-6 text-center transition hover:border-emerald-400/50 hover:bg-emerald-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
+            className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-5 text-center transition hover:border-amber-400/50 hover:bg-amber-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
           >
+            {/* <ListTodo className="h-7 w-7 text-emerald-500 dark:text-emerald-400" strokeWidth={2} /> */}
             <span className="font-semibold text-slate-900 dark:text-white">Task / To-do</span>
             <span className="text-xs text-slate-500 dark:text-muted">One-off checklist items</span>
           </button>
+          {/* Appointment option — commented out for now
+          <button
+            type="button"
+            onClick={startCreateAppt}
+            className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/70 p-5 text-center transition hover:border-amber-400/50 hover:bg-amber-50/40 dark:border-white/10 dark:bg-[#111]/55 dark:hover:border-white/20 dark:hover:bg-[#1a1a1a]/70"
+          >
+            <span className="font-semibold text-slate-900 dark:text-white">Appointment</span>
+            <span className="text-xs text-slate-500 dark:text-muted">Schedule with date &amp; time</span>
+          </button>
+          */}
         </div>
       </Modal>
 
@@ -760,6 +988,81 @@ export function Dashboard() {
           <p className="text-center text-[10px] text-slate-400 dark:text-slate-600">
             Press Enter to save
           </p>
+        </div>
+      </Modal>
+
+      <Modal
+        title={apptEditingId ? "Edit appointment" : "New appointment"}
+        isOpen={apptModalOpen}
+        onClose={closeAllModals}
+        wide
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-muted">
+              Title
+            </label>
+            <input
+              autoFocus
+              value={apptForm.title}
+              onChange={(e) => setApptForm((f) => ({ ...f, title: e.target.value }))}
+              className="input-themed w-full"
+              placeholder="e.g. Doctor checkup"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-muted">
+                Date
+              </label>
+              <input
+                type="date"
+                value={apptForm.date}
+                onChange={(e) => setApptForm((f) => ({ ...f, date: e.target.value }))}
+                className="input-themed w-full"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-muted">
+                Time
+              </label>
+              <input
+                type="time"
+                value={apptForm.time}
+                onChange={(e) => setApptForm((f) => ({ ...f, time: e.target.value }))}
+                className="input-themed w-full"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-muted">
+              Notes <span className="normal-case font-normal text-slate-400">(optional)</span>
+            </label>
+            <textarea
+              value={apptForm.notes}
+              onChange={(e) => setApptForm((f) => ({ ...f, notes: e.target.value }))}
+              className="input-themed w-full resize-none"
+              rows={3}
+              placeholder="Any details or reminders…"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button
+              type="button"
+              onClick={saveAppt}
+              disabled={!apptForm.title.trim()}
+              className="flex-1 rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-sky-500"
+            >
+              {apptEditingId ? "Save changes" : "Add appointment"}
+            </button>
+            <button
+              type="button"
+              onClick={closeAllModals}
+              className="rounded-xl border border-slate-300/90 px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/10 dark:text-muted dark:hover:border-white/25 dark:hover:text-white"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </Modal>
     </div>

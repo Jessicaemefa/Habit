@@ -5,7 +5,7 @@ import { loadAppState, saveAppState } from "@/lib/tracker-storage";
 import { toLocalDateKey } from "@/lib/date-utils";
 import type { ActivityEntry } from "@/types/tracker";
 import {
-  CalendarCheck,
+  // CalendarCheck, // appointments commented out
   CheckCircle2,
   Flame,
   ListChecks,
@@ -51,8 +51,8 @@ const KIND_META: Partial<
   habit_deleted:   { label: "Habit removed",   Icon: RefreshCw,     className: "text-red-500" },
   task_deleted:    { label: "Task removed",    Icon: RefreshCw,     className: "text-red-500" },
   day_rollover:    { label: "Day reset",       Icon: RefreshCw,     className: "text-sky-600 dark:text-sky-400" },
-  appointment_completed:   { label: "Appointment done",     Icon: CalendarCheck, className: "text-emerald-600 dark:text-emerald-400" },
-  appointment_uncompleted: { label: "Appointment reopened", Icon: CalendarCheck, className: "text-slate-500 dark:text-slate-400" },
+  // appointment_completed:   { label: "Appointment done",     Icon: CalendarCheck, className: "text-emerald-600 dark:text-emerald-400" },
+  // appointment_uncompleted: { label: "Appointment reopened", Icon: CalendarCheck, className: "text-slate-500 dark:text-slate-400" },
 };
 
 // ─── skeleton ────────────────────────────────────────────────────────────────
@@ -118,6 +118,7 @@ export default function HistoryPage() {
   const [log, setLog] = useState<ActivityEntry[]>([]);
   const [habitCount, setHabitCount] = useState(0);
   const [taskCount, setTaskCount] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -133,21 +134,23 @@ export default function HistoryPage() {
     setLog(pruned);
     setHabitCount(s.habits.length);
     setTaskCount(s.tasks.length);
+    setBestStreak(s.habits.length > 0 ? Math.max(...s.habits.map((h) => h.bestStreak)) : 0);
     setReady(true);
   }, []);
 
   const summary = useMemo(() => {
-    let habitCompleted = 0, taskCompleted = 0, apptCompleted = 0, newDays = 0;
+    let habitCompleted = 0, taskCompleted = 0, newDays = 0;
+    // let apptCompleted = 0; // appointments commented out
     for (const e of log) {
       if (e.kind === "habit_completed") habitCompleted++;
       if (e.kind === "task_completed") taskCompleted++;
-      if (e.kind === "appointment_completed") apptCompleted++;
+      // if (e.kind === "appointment_completed") apptCompleted++;
       if (e.kind === "day_rollover") newDays++;
     }
     const activeDays = new Set(
       log.filter((e) => e.kind !== "day_rollover").map((e) => toLocalDateKey(new Date(e.at))),
     ).size;
-    return { habitCompleted, taskCompleted, apptCompleted, newDays, activeDays };
+    return { habitCompleted, taskCompleted, newDays, activeDays };
   }, [log]);
 
   const byDay = useMemo(() => activityCountByDay(log), [log]);
@@ -168,7 +171,7 @@ export default function HistoryPage() {
 
   // recent = last 2 days, all event types (already pruned)
   const recentActivity = useMemo(
-    () => log.filter((e) => e.kind !== "appointment_completed" && e.kind !== "appointment_uncompleted"),
+    () => log.filter((e) => e.kind !== "day_rollover"),
     [log],
   );
 
@@ -177,10 +180,10 @@ export default function HistoryPage() {
     () => log.filter((e) => e.kind === "task_completed"),
     [log],
   );
-  const completedAppts = useMemo(
-    () => log.filter((e) => e.kind === "appointment_completed"),
-    [log],
-  );
+  // const completedAppts = useMemo(
+  //   () => log.filter((e) => e.kind === "appointment_completed"),
+  //   [log],
+  // );
 
   if (!ready) return <HistorySkeleton />;
 
@@ -204,7 +207,7 @@ export default function HistoryPage() {
           {[
             { value: summary.habitCompleted, label: "Habit goals met" },
             { value: summary.taskCompleted,  label: "Tasks checked off" },
-            { value: summary.apptCompleted,  label: "Appointments done" },
+            { value: bestStreak,             label: "Best streak" },
             { value: summary.activeDays,     label: "Days with activity" },
             { value: habitCount,             label: "Habits now" },
             { value: taskCount,              label: "Tasks now" },
@@ -256,13 +259,13 @@ export default function HistoryPage() {
         </p>
       </section>
 
-      {/* ── Completed (tasks + appointments) ── */}
+      {/* ── Completed (tasks) ── */}
       <section className="mb-8">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-muted">
           Completed
         </h2>
 
-        {completedTasks.length === 0 && completedAppts.length === 0 ? (
+        {completedTasks.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300/80 p-6 text-center text-sm text-slate-500 dark:border-white/10 dark:text-muted">
             No completions logged in the last 48 hours.
           </div>
@@ -281,7 +284,7 @@ export default function HistoryPage() {
               </div>
             )}
 
-            {/* Completed Appointments */}
+            {/* Completed Appointments — commented out
             {completedAppts.length > 0 && (
               <div>
                 <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -293,6 +296,7 @@ export default function HistoryPage() {
                 </ul>
               </div>
             )}
+            */}
           </div>
         )}
       </section>
