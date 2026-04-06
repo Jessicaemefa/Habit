@@ -17,8 +17,8 @@ export function AppHeader() {
     }`;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-[var(--page-bg)]/80 backdrop-blur-xl dark:border-white/6">
-      <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-[var(--page-bg)]/95 shadow-sm backdrop-blur-xl dark:border-white/10 dark:shadow-none">
+      <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-3">
         <nav
           className="flex gap-1 rounded-2xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/8 dark:bg-[#111]/60"
           aria-label="Main navigation"
@@ -28,9 +28,6 @@ export function AppHeader() {
           </Link>
           <Link href="/history" className={linkCls(pathname === "/history")}>
             History
-          </Link>
-          <Link href="/appointments" className={linkCls(pathname === "/appointments")}>
-            Appointments
           </Link>
         </nav>
 

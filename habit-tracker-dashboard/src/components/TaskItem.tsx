@@ -2,6 +2,7 @@
 
 import type { TaskState } from "@/types/tracker";
 import { Check, Pencil, Trash2 } from "lucide-react";
+import { CircularProgressRing } from "@/components/CircularProgressRing";
 
 type TaskItemProps = {
   task: TaskState;
@@ -21,7 +22,7 @@ export function TaskItem({
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-slate-400 transition hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 dark:border-white/18 dark:hover:border-white/35 dark:focus-visible:ring-accent-amber/50"
+        className="shrink-0 pt-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 dark:focus-visible:ring-accent-amber/50 rounded-full"
         aria-pressed={task.isCompleted}
         aria-label={
           task.isCompleted
@@ -29,9 +30,17 @@ export function TaskItem({
             : `Mark complete: ${task.text}`
         }
       >
-        {task.isCompleted ? (
-          <Check className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" strokeWidth={2.5} aria-hidden />
-        ) : null}
+        <CircularProgressRing
+          progress={task.isCompleted ? 1 : 0}
+          size={44}
+          strokeWidth={4}
+          trackClassName="stroke-slate-300 dark:stroke-white/10"
+          progressClassName="stroke-emerald-500"
+        >
+          {task.isCompleted ? (
+            <Check className="h-4 w-4 text-emerald-500" strokeWidth={2.5} aria-hidden />
+          ) : null}
+        </CircularProgressRing>
       </button>
 
       <div className="flex min-w-0 flex-1 items-center gap-2">
