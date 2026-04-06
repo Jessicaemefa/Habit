@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -28,7 +29,7 @@ import { TaskItem } from "@/components/TaskItem";
 import { CircularProgressRing } from "@/components/CircularProgressRing";
 import { Modal } from "@/components/Modal";
 import { IconPickerGrid } from "@/components/IconPickerGrid";
-import { Flame, ListTodo, Plus, Sparkles, Target, Trophy } from "lucide-react";
+import { Flame, Plus, Target, Trophy } from "lucide-react";
 
 function DashboardSkeleton() {
   return (
