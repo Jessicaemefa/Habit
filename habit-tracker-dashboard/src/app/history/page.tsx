@@ -187,12 +187,9 @@ export default function HistoryPage() {
   return (
     <div className="mx-auto max-w-lg px-4 py-8 pb-16 sm:px-6 sm:py-10">
       <header className="mb-8">
-        <div className="flex items-center gap-2 text-amber-600 dark:text-accent-amber">
-          {/* <Calendar className="h-8 w-8" strokeWidth={2} /> */}
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
-            History &amp; insights
-          </h1>
-        </div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+          History &amp; insights
+        </h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-muted">
           Shows the last 48 hours — older entries are cleared automatically.
         </p>

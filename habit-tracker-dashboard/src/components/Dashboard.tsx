@@ -29,8 +29,54 @@ import { TaskItem } from "@/components/TaskItem";
 import { CircularProgressRing } from "@/components/CircularProgressRing";
 import { Modal } from "@/components/Modal";
 import { IconPickerGrid } from "@/components/IconPickerGrid";
-import { AppHeader } from "@/components/AppHeader";
-import { Clock, Flame, Plus, Target, Trophy } from "lucide-react";
+import { Flame, Plus, Target, Trophy } from "lucide-react";
+
+function DashboardSkeleton() {
+  return (
+    <div className="relative min-h-screen">
+      <div className="mx-auto max-w-lg px-4 py-8 pb-36 sm:px-6 sm:py-10 sm:pb-40">
+        {/* date heading skeleton */}
+        <div className="mb-8 space-y-2">
+          <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+          <div className="h-9 w-52 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+        </div>
+        {/* hero card skeleton */}
+        <div className="glass-card glass-inset mb-8 rounded-2xl p-5 sm:p-6">
+          <div className="flex items-center gap-5">
+            <div className="h-28 w-28 shrink-0 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+            <div className="space-y-3">
+              <div className="h-5 w-28 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+              <div className="h-4 w-40 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+            </div>
+          </div>
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-slate-200/90 bg-white/50 p-3 dark:border-white/8 dark:bg-[#111]/50"
+              >
+                <div className="mx-auto h-6 w-6 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+                <div className="mx-auto mt-2 h-6 w-10 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+                <div className="mx-auto mt-1.5 h-3 w-14 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* tab bar skeleton */}
+        <div className="mb-4 h-11 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/8" />
+        {/* list skeleton */}
+        <div className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-[72px] animate-pulse rounded-2xl border border-slate-200/90 bg-white/50 dark:border-white/8 dark:bg-[#111]/50"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function newId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
