@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent iOS Safari from zooming on input focus (requires font-size >= 16px) */
+@layer base {
+  input, textarea, select {
+    font-size: 16px;
+  }
+}
+
 :root {
   --page-bg: #f0f4fa;
   --glass-bg: linear-gradient(
@@ -90,4 +97,15 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Slide-fade animation: item fades + slides down when completing */
+@keyframes item-slide-fade {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(18px) scale(0.97); }
+}
+
+.item-completing {
+  animation: item-slide-fade 380ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
 }

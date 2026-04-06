@@ -35,7 +35,9 @@ export type ActivityKind =
   | "task_completed"
   | "task_uncompleted"
   | "task_created"
-  | "task_deleted";
+  | "task_deleted"
+  | "appointment_completed"
+  | "appointment_uncompleted";
 
 export type ActivityEntry = {
   id: string;
@@ -44,6 +46,7 @@ export type ActivityEntry = {
   summary: string;
   habitId?: string;
   taskId?: string;
+  appointmentId?: string;
 };
 
 export const STORAGE_VERSION = 3 as const;

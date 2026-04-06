@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, LayoutDashboard, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 
 export function AppHeader() {
@@ -17,31 +17,36 @@ export function AppHeader() {
     }`;
 
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <nav className="flex gap-1 rounded-2xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/8 dark:bg-[#111]/60">
-        <Link href="/" className={linkCls(pathname === "/")}>
-          {/* <LayoutDashboard className="h-4 w-4" strokeWidth={2} /> */}
-          Today
-        </Link>
-        <Link href="/history" className={linkCls(pathname === "/history")}>
-          {/* <CalendarDays className="h-4 w-4" strokeWidth={2} /> */}
-          History
-        </Link>
-      </nav>
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-[var(--page-bg)]/80 backdrop-blur-xl dark:border-white/6">
+      <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <nav
+          className="flex gap-1 rounded-2xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/8 dark:bg-[#111]/60"
+          aria-label="Main navigation"
+        >
+          <Link href="/" className={linkCls(pathname === "/")}>
+            Today
+          </Link>
+          <Link href="/history" className={linkCls(pathname === "/history")}>
+            History
+          </Link>
+          <Link href="/appointments" className={linkCls(pathname === "/appointments")}>
+            Appointments
+          </Link>
+        </nav>
 
-      {/* Icon-only theme toggle */}
-      <button
-        type="button"
-        onClick={toggleTheme}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/60 transition hover:bg-slate-100 dark:border-white/8 dark:bg-[#111]/60 dark:hover:bg-white/8"
-        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      >
-        {theme === "dark" ? (
-          <Sun className="h-4 w-4 text-[#888] hover:text-white" strokeWidth={2} />
-        ) : (
-          <Moon className="h-4 w-4 text-slate-600" strokeWidth={2} />
-        )}
-      </button>
-    </div>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/60 transition hover:bg-slate-100 dark:border-white/8 dark:bg-[#111]/60 dark:hover:bg-white/8"
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-4 w-4 text-[#888] hover:text-white" strokeWidth={2} />
+          ) : (
+            <Moon className="h-4 w-4 text-slate-600" strokeWidth={2} />
+          )}
+        </button>
+      </div>
+    </header>
   );
 }

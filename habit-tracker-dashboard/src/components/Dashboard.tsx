@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -28,8 +29,54 @@ import { TaskItem } from "@/components/TaskItem";
 import { CircularProgressRing } from "@/components/CircularProgressRing";
 import { Modal } from "@/components/Modal";
 import { IconPickerGrid } from "@/components/IconPickerGrid";
-import { AppHeader } from "@/components/AppHeader";
-import { Clock, Flame, Plus, Target, Trophy } from "lucide-react";
+import { Flame, Plus, Target, Trophy } from "lucide-react";
+
+function DashboardSkeleton() {
+  return (
+    <div className="relative min-h-screen">
+      <div className="mx-auto max-w-lg px-4 py-8 pb-36 sm:px-6 sm:py-10 sm:pb-40">
+        {/* date heading skeleton */}
+        <div className="mb-8 space-y-2">
+          <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+          <div className="h-9 w-52 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+        </div>
+        {/* hero card skeleton */}
+        <div className="glass-card glass-inset mb-8 rounded-2xl p-5 sm:p-6">
+          <div className="flex items-center gap-5">
+            <div className="h-28 w-28 shrink-0 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+            <div className="space-y-3">
+              <div className="h-5 w-28 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+              <div className="h-4 w-40 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+            </div>
+          </div>
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-slate-200/90 bg-white/50 p-3 dark:border-white/8 dark:bg-[#111]/50"
+              >
+                <div className="mx-auto h-6 w-6 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+                <div className="mx-auto mt-2 h-6 w-10 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+                <div className="mx-auto mt-1.5 h-3 w-14 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* tab bar skeleton */}
+        <div className="mb-4 h-11 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/8" />
+        {/* list skeleton */}
+        <div className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-[72px] animate-pulse rounded-2xl border border-slate-200/90 bg-white/50 dark:border-white/8 dark:bg-[#111]/50"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function newId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -72,6 +119,10 @@ export function Dashboard() {
     activityLog,
     lastActiveDate,
   });
+
+  const [activeTab, setActiveTab] = useState<"habits" | "tasks">("habits");
+  const [completingHabitIds, setCompletingHabitIds] = useState<Set<string>>(new Set());
+  const [completingTaskIds, setCompletingTaskIds] = useState<Set<string>>(new Set());
 
   const [pickOpen, setPickOpen] = useState(false);
   const [habitModalOpen, setHabitModalOpen] = useState(false);
@@ -151,10 +202,6 @@ export function Dashboard() {
 
   const heroHabitRingProgress =
     totalHabits > 0 ? habitsDoneToday / totalHabits : 0;
-
-  const pendingHabitItems = habits.filter((h) => h.dailyProgress < h.dailyGoal);
-  const pendingTaskItems = tasks.filter((t) => !t.isCompleted);
-  const totalPending = pendingHabitItems.length + pendingTaskItems.length;
 
   const bestStreak =
     habits.length > 0 ? Math.max(...habits.map((h) => h.bestStreak)) : 0;
@@ -237,26 +284,17 @@ export function Dashboard() {
       const nextH = setHabitDailyProgress(h, value);
       const nowDone = nextH.dailyProgress >= nextH.dailyGoal;
       if (!wasDone && nowDone) {
+        // slide-fade then settle at bottom
+        setCompletingHabitIds((s) => new Set([...s, id]));
+        setTimeout(() => {
+          setCompletingHabitIds((s) => { const n = new Set(s); n.delete(id); return n; });
+        }, 420);
         setActivityLog((log) =>
-          mergeLog(
-            log,
-            newLogEntry({
-              kind: "habit_completed",
-              summary: `Completed daily goal: ${h.name}`,
-              habitId: h.id,
-            }),
-          ),
+          mergeLog(log, newLogEntry({ kind: "habit_completed", summary: `Completed daily goal: ${h.name}`, habitId: h.id })),
         );
       } else if (wasDone && !nowDone) {
         setActivityLog((log) =>
-          mergeLog(
-            log,
-            newLogEntry({
-              kind: "habit_undo",
-              summary: `Undid completion: ${h.name}`,
-              habitId: h.id,
-            }),
-          ),
+          mergeLog(log, newLogEntry({ kind: "habit_undo", summary: `Undid completion: ${h.name}`, habitId: h.id })),
         );
       }
       return prev.map((x) => (x.id === id ? nextH : x));
@@ -268,19 +306,21 @@ export function Dashboard() {
       const t = prev.find((x) => x.id === id);
       if (!t) return prev;
       const nextDone = !t.isCompleted;
+      if (nextDone) {
+        // slide-fade then settle at bottom
+        setCompletingTaskIds((s) => new Set([...s, id]));
+        setTimeout(() => {
+          setCompletingTaskIds((s) => { const n = new Set(s); n.delete(id); return n; });
+        }, 420);
+      }
       setActivityLog((log) =>
-        mergeLog(
-          log,
-          newLogEntry({
-            kind: nextDone ? "task_completed" : "task_uncompleted",
-            summary: nextDone ? `Task done: ${t.text}` : `Task reopened: ${t.text}`,
-            taskId: t.id,
-          }),
-        ),
+        mergeLog(log, newLogEntry({
+          kind: nextDone ? "task_completed" : "task_uncompleted",
+          summary: nextDone ? `Task done: ${t.text}` : `Task reopened: ${t.text}`,
+          taskId: t.id,
+        })),
       );
-      return prev.map((x) =>
-        x.id === id ? { ...x, isCompleted: nextDone } : x,
-      );
+      return prev.map((x) => x.id === id ? { ...x, isCompleted: nextDone } : x);
     });
   }, []);
 
@@ -426,11 +466,11 @@ export function Dashboard() {
     }
   };
 
+  if (!storageReady) return <DashboardSkeleton />;
+
   return (
     <div className="relative min-h-screen">
       <div className="mx-auto max-w-lg px-4 py-8 pb-36 sm:px-6 sm:py-10 sm:pb-40">
-        <AppHeader />
-
         <header className="mb-8" suppressHydrationWarning>
           <p className="text-sm font-medium text-slate-600 dark:text-muted">
             {headerWeekday}
@@ -442,37 +482,6 @@ export function Dashboard() {
             </span>
           </h1>
         </header>
-
-        {totalHabits === 0 && totalTasks === 0 ? (
-          <div className="glass-card glass-inset mb-8 rounded-2xl p-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:p-6">
-            <p className="font-semibold text-slate-900 dark:text-white">
-              How it works
-            </p>
-            <ol className="mt-3 list-decimal space-y-2 pl-5">
-              <li>
-                Tap <strong>Add new</strong> and choose <strong>Daily habit</strong> or{" "}
-                <strong>Task</strong>.
-              </li>
-              <li>
-                <strong>Tap a habit card</strong> to mark it done — tap again to undo an
-                accidental tap.
-              </li>
-              <li>
-                <strong>Completion %</strong> is based on habits and tasks done vs. total.
-              </li>
-              <li>
-                After <strong>100-day</strong> streaks, extra milestone targets appear.
-              </li>
-              <li>
-                <strong>Completed tasks</strong> clear when the calendar day changes; habits
-                reset progress but keep streaks.
-              </li>
-              <li>
-                Open <strong>History</strong> for a calendar and summaries.
-              </li>
-            </ol>
-          </div>
-        ) : null}
 
         <section
           className="glass-card glass-inset mb-8 rounded-2xl p-5 sm:p-6"
@@ -539,109 +548,81 @@ export function Dashboard() {
           </div>
         </section>
 
-        {totalPending > 0 && (
-          <section className="mb-6" aria-label="Pending items">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-muted">
-                <Clock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                Pending
-              </h2>
-              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
-                {totalPending} left
-              </span>
-            </div>
-            <div className="glass-card glass-inset rounded-2xl p-4 space-y-3">
-              {pendingHabitItems.length > 0 && (
-                <div>
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-500">
-                    Habits &middot; {pendingHabitItems.length}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {pendingHabitItems.map((h) => (
-                      <span
-                        key={h.id}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200/90 bg-white/70 px-2.5 py-1 text-xs text-slate-700 dark:border-white/8 dark:bg-[#111]/55 dark:text-[#888]"
-                      >
-                        {h.accentEmoji ? (
-                          <span aria-hidden>{h.accentEmoji}</span>
-                        ) : null}
-                        {h.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {pendingTaskItems.length > 0 && (
-                <div>
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-500">
-                    Tasks &middot; {pendingTaskItems.length}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {pendingTaskItems.map((t) => (
-                      <span
-                        key={t.id}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200/90 bg-white/70 px-2.5 py-1 text-xs text-slate-700 dark:border-white/8 dark:bg-[#111]/55 dark:text-[#888]"
-                      >
-                        {t.text}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
+        {/* ── Tab bar ── */}
+        <div
+          className="mb-5 flex gap-1 rounded-2xl border border-slate-200/80 bg-white/60 p-1 dark:border-white/8 dark:bg-[#111]/60"
+          role="tablist"
+          aria-label="Today's view"
+        >
+          {(["habits", "tasks"] as const).map((tab) => {
+            const active = activeTab === tab;
+            const label = tab === "habits" ? "Daily Habits" : "Tasks";
+            const badge = tab === "habits"
+              ? `${habitsDoneToday}/${totalHabits}`
+              : `${doneTasks}/${totalTasks}`;
+            return (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveTab(tab)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                  active
+                    ? "bg-amber-500/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-400"
+                    : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 dark:text-[#888] dark:hover:bg-white/5 dark:hover:text-white"
+                }`}
+              >
+                {label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    active
+                      ? "bg-amber-500/20 text-amber-800 dark:text-amber-300"
+                      : "bg-slate-200/80 text-slate-500 dark:bg-white/10 dark:text-[#666]"
+                  }`}
+                >
+                  {badge}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-        <section className="mb-10" aria-labelledby="daily-habits-heading">
-          <div className="mb-4 flex items-center justify-between">
-            <h2
-              id="daily-habits-heading"
-              className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-muted"
-            >
-              Daily Habits
-            </h2>
-            <span className="text-sm text-slate-500 dark:text-muted">
-              {habitsDoneToday}/{totalHabits}
-            </span>
-          </div>
-          <ul className="flex flex-col gap-3">
-            {habits.map((habit) => (
-              <li key={habit.id}>
-                <HabitCard
-                  habit={habit}
-                  onSetProgress={(v) => commitHabitProgress(habit.id, v)}
-                  onEdit={() => openEditHabit(habit.id)}
-                  onDelete={() => deleteHabit(habit.id)}
-                />
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="mb-6" aria-labelledby="tasks-heading">
-          <div className="mb-4 flex items-center justify-between">
-            <h2
-              id="tasks-heading"
-              className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-muted"
-            >
-              Tasks / To-do
-            </h2>
-            <span className="text-sm text-slate-500 dark:text-muted">
-              {doneTasks}/{totalTasks}
-            </span>
-          </div>
-          <ul className="flex flex-col gap-3">
-            {tasks.map((task) => (
-              <li key={task.id}>
-                <TaskItem
-                  task={task}
-                  onToggle={() => toggleTask(task.id)}
-                  onEdit={() => openEditTask(task.id)}
-                  onDelete={() => deleteTask(task.id)}
-                />
-              </li>
-            ))}
-          </ul>
+        {/* ── Tab content ── */}
+        <section aria-label={activeTab === "habits" ? "Daily Habits" : "Tasks"}>
+          {activeTab === "habits" ? (
+            <ul className="flex flex-col gap-3">
+              {[
+                ...habits.filter((h) => h.dailyProgress < h.dailyGoal || completingHabitIds.has(h.id)),
+                ...habits.filter((h) => h.dailyProgress >= h.dailyGoal && !completingHabitIds.has(h.id)),
+              ].map((habit) => (
+                <li key={habit.id} className={completingHabitIds.has(habit.id) ? "item-completing" : ""}>
+                  <HabitCard
+                    habit={habit}
+                    onSetProgress={(v) => commitHabitProgress(habit.id, v)}
+                    onEdit={() => openEditHabit(habit.id)}
+                    onDelete={() => deleteHabit(habit.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {[
+                ...tasks.filter((t) => !t.isCompleted || completingTaskIds.has(t.id)),
+                ...tasks.filter((t) => t.isCompleted && !completingTaskIds.has(t.id)),
+              ].map((task) => (
+                <li key={task.id} className={completingTaskIds.has(task.id) ? "item-completing" : ""}>
+                  <TaskItem
+                    task={task}
+                    onToggle={() => toggleTask(task.id)}
+                    onEdit={() => openEditTask(task.id)}
+                    onDelete={() => deleteTask(task.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
 
