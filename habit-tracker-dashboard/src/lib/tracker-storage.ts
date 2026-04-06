@@ -110,6 +110,7 @@ function normalizeActivity(raw: unknown): ActivityEntry | null {
     summary: e.summary,
     habitId: typeof e.habitId === "string" ? e.habitId : undefined,
     taskId: typeof e.taskId === "string" ? e.taskId : undefined,
+    appointmentId: typeof e.appointmentId === "string" ? e.appointmentId : undefined,
   };
 }
 
