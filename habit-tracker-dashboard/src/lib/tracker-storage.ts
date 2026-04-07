@@ -261,6 +261,34 @@ export function mergeLog(log: ActivityEntry[], entry: ActivityEntry): ActivityEn
   return [entry, ...log].slice(0, MAX_LOG);
 }
 
+/**
+ * Normalise a raw object (e.g. from cloud storage) into a validated LoadedAppState.
+ * Falls back to `fallback` if the shape is unrecognisable.
+ */
+export function parseAppState(
+  raw: unknown,
+  fallback: LoadedAppState,
+): LoadedAppState {
+  if (!raw || typeof raw !== "object") return fallback;
+  const p = raw as Record<string, unknown>;
+  if (!Array.isArray(p.habits) || !Array.isArray(p.tasks)) return fallback;
+  const today = toLocalDateKey(new Date());
+  const habits = p.habits
+    .map(normalizeHabit)
+    .filter((h): h is HabitState => h !== null);
+  const tasks = p.tasks
+    .map(normalizeTask)
+    .filter((t): t is TaskState => t !== null);
+  const activityLog = Array.isArray(p.activityLog)
+    ? p.activityLog
+        .map(normalizeActivity)
+        .filter((e): e is ActivityEntry => e !== null)
+    : [];
+  const lastActiveDate =
+    typeof p.lastActiveDate === "string" ? p.lastActiveDate : today;
+  return { habits, tasks, activityLog, lastActiveDate };
+}
+
 /** @deprecated use loadAppState */
 export function loadTrackerState(fallback: {
   habits: HabitState[];

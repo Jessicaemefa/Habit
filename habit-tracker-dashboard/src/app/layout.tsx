@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppHeader } from "@/components/AppHeader";
+import { UserProvider } from "@/context/UserContext";
+import { AppShell } from "@/components/AppShell";
 import { PwaRegistration } from "@/components/PwaRegistration";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -48,10 +50,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <ThemeProvider>
-          <AppHeader />
-          <main>{children}</main>
-        </ThemeProvider>
+        <UserProvider>
+          <ThemeProvider>
+            <AppHeader />
+            <main>
+              <AppShell>{children}</AppShell>
+            </main>
+          </ThemeProvider>
+        </UserProvider>
         <PwaRegistration />
         <Analytics />
       </body>

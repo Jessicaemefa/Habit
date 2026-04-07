@@ -14,8 +14,11 @@ import {
   mergeLog,
   newLogEntry,
   saveAppState,
+  parseAppState,
   applyDayRollover,
 } from "@/lib/tracker-storage";
+import { loadFromCloud, saveToCloud } from "@/lib/cloud-sync";
+import { useUser } from "@/context/UserContext";
 import type { ActivityEntry, HabitState, TaskState } from "@/types/tracker";
 import type { TrackingIconName } from "@/lib/tracking-icons";
 import { setHabitDailyProgress } from "@/lib/habit-progress";
@@ -105,53 +108,6 @@ const emptyApptForm = (): ApptForm => ({
   time: nowTimeStr(),
 });
 
-function DashboardSkeleton() {
-  return (
-    <div className="relative min-h-screen">
-      <div className="mx-auto max-w-lg px-4 py-8 pb-36 sm:px-6 sm:py-10 sm:pb-40">
-        {/* date heading skeleton */}
-        <div className="mb-8 space-y-2">
-          <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-          <div className="h-9 w-52 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-        </div>
-        {/* hero card skeleton */}
-        <div className="glass-card glass-inset mb-8 rounded-2xl p-5 sm:p-6">
-          <div className="flex items-center gap-5">
-            <div className="h-28 w-28 shrink-0 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-            <div className="space-y-3">
-              <div className="h-5 w-28 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-              <div className="h-4 w-40 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="rounded-xl border border-slate-200/90 bg-white/50 p-3 dark:border-white/8 dark:bg-[#111]/50"
-              >
-                <div className="mx-auto h-6 w-6 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-                <div className="mx-auto mt-2 h-6 w-10 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-                <div className="mx-auto mt-1.5 h-3 w-14 animate-pulse rounded-full bg-slate-200 dark:bg-white/8" />
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* tab bar skeleton */}
-        <div className="mb-4 h-11 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/8" />
-        {/* list skeleton */}
-        <div className="flex flex-col gap-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-[72px] animate-pulse rounded-2xl border border-slate-200/90 bg-white/50 dark:border-white/8 dark:bg-[#111]/50"
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function newId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -179,13 +135,26 @@ const emptyTaskForm = (): TaskForm => ({
 });
 
 export function Dashboard() {
-  const [habits, setHabits] = useState<HabitState[]>(DEFAULT_HABITS);
-  const [tasks, setTasks] = useState<TaskState[]>(DEFAULT_TASKS);
-  const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
-  const [lastActiveDate, setLastActiveDate] = useState(() =>
-    toLocalDateKey(new Date()),
-  );
-  const [storageReady, setStorageReady] = useState(false);
+  const { username } = useUser();
+
+  // ── Lazy sync init from localStorage (runs on first client render only,
+  //    safe because this component is imported with ssr: false in page.tsx) ──
+  const [habits, setHabits] = useState<HabitState[]>(() => {
+    const today = toLocalDateKey(new Date());
+    return loadAppState({ habits: DEFAULT_HABITS, tasks: DEFAULT_TASKS, lastActiveDate: today, activityLog: [] }).habits;
+  });
+  const [tasks, setTasks] = useState<TaskState[]>(() => {
+    const today = toLocalDateKey(new Date());
+    return loadAppState({ habits: DEFAULT_HABITS, tasks: DEFAULT_TASKS, lastActiveDate: today, activityLog: [] }).tasks;
+  });
+  const [activityLog, setActivityLog] = useState<ActivityEntry[]>(() => {
+    const today = toLocalDateKey(new Date());
+    return loadAppState({ habits: DEFAULT_HABITS, tasks: DEFAULT_TASKS, lastActiveDate: today, activityLog: [] }).activityLog;
+  });
+  const [lastActiveDate, setLastActiveDate] = useState<string>(() => {
+    const today = toLocalDateKey(new Date());
+    return loadAppState({ habits: DEFAULT_HABITS, tasks: DEFAULT_TASKS, lastActiveDate: today, activityLog: [] }).lastActiveDate;
+  });
 
   const snapRef = useRef({
     habits,
@@ -194,8 +163,8 @@ export function Dashboard() {
     lastActiveDate,
   });
 
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [apptReady, setApptReady] = useState(false);
+  // ── Appointments (also lazy) ──
+  const [appointments, setAppointments] = useState<Appointment[]>(() => loadAppts());
   const [completingApptIds, setCompletingApptIds] = useState<Set<string>>(new Set());
   const [apptModalOpen, setApptModalOpen] = useState(false);
   const [apptEditingId, setApptEditingId] = useState<string | null>(null);
@@ -217,40 +186,52 @@ export function Dashboard() {
     snapRef.current = { habits, tasks, activityLog, lastActiveDate };
   }, [habits, tasks, activityLog, lastActiveDate]);
 
+  // ── Save to localStorage on every change ──
   useEffect(() => {
-    const today = toLocalDateKey(new Date());
-    const data = loadAppState({
-      habits: [],
-      tasks: [],
-      lastActiveDate: today,
-      activityLog: [],
+    saveAppState({ habits, tasks, lastActiveDate, activityLog });
+  }, [habits, tasks, activityLog, lastActiveDate]);
+
+  // ── Save appointments to localStorage on change ──
+  useEffect(() => {
+    saveAppts(appointments);
+  }, [appointments]);
+
+  // ── Load from cloud on login, merge into local state ──
+  const skipCloudSaveRef = useRef(false);
+  useEffect(() => {
+    if (!username) return;
+    loadFromCloud(username).then((raw) => {
+      if (!raw) return;
+      const today = toLocalDateKey(new Date());
+      const state = parseAppState(raw, { habits: [], tasks: [], lastActiveDate: today, activityLog: [] });
+      if (!state.habits.length && !state.tasks.length) return; // empty cloud — keep local
+      skipCloudSaveRef.current = true;
+      setHabits(state.habits);
+      setTasks(state.tasks);
+      setActivityLog(state.activityLog);
+      setLastActiveDate(state.lastActiveDate);
+      saveAppState(state);
     });
-    setHabits(data.habits);
-    setTasks(data.tasks);
-    setActivityLog(data.activityLog);
-    setLastActiveDate(data.lastActiveDate);
-    setStorageReady(true);
-  }, []);
+  }, [username]); // username is stable after login
 
+  // ── Debounced cloud save (3 s after last change) ──
+  const cloudSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!storageReady) return;
-    saveAppState({
-      habits,
-      tasks,
-      lastActiveDate,
-      activityLog,
-    });
-  }, [habits, tasks, activityLog, lastActiveDate, storageReady]);
+    if (!username) return;
+    if (skipCloudSaveRef.current) {
+      skipCloudSaveRef.current = false;
+      return;
+    }
+    if (cloudSaveTimerRef.current) clearTimeout(cloudSaveTimerRef.current);
+    cloudSaveTimerRef.current = setTimeout(() => {
+      saveToCloud(username, { habits, tasks, lastActiveDate, activityLog });
+    }, 3000);
+    return () => {
+      if (cloudSaveTimerRef.current) clearTimeout(cloudSaveTimerRef.current);
+    };
+  }, [username, habits, tasks, activityLog, lastActiveDate]);
 
-  useEffect(() => {
-    setAppointments(loadAppts());
-    setApptReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (apptReady) saveAppts(appointments);
-  }, [appointments, apptReady]);
-
+  // ── Day rollover ──
   const runRolloverIfNeeded = useCallback(() => {
     const today = toLocalDateKey(new Date());
     const s = snapRef.current;
@@ -263,7 +244,6 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!storageReady) return;
     const id = setInterval(runRolloverIfNeeded, 45000);
     const onVis = () => {
       if (document.visibilityState === "visible") runRolloverIfNeeded();
@@ -273,7 +253,7 @@ export function Dashboard() {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [storageReady, runRolloverIfNeeded]);
+  }, [runRolloverIfNeeded]);
 
   const now = new Date();
   const headerWeekday = now.toLocaleDateString("en-US", { weekday: "long" });
@@ -647,8 +627,6 @@ export function Dashboard() {
       saveTask();
     }
   };
-
-  if (!storageReady) return <DashboardSkeleton />;
 
   return (
     <div className="relative min-h-screen">
